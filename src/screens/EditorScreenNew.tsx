@@ -37,17 +37,17 @@ export function EditorScreen() {
   const { projectId } = route.params as { projectId: string };
 
   // Stores
-  const { 
-    project, 
+  const {
+    project,
     isDirty,
-    addNode, 
-    moveNode, 
+    addNode,
+    moveNode,
     addConnection,
     removeConnection,
     markSaved,
   } = useProjectStore();
-  
-  const { 
+
+  const {
     mode,
     selection,
     setSelection,
@@ -162,6 +162,11 @@ export function EditorScreen() {
     setAnalysisVisible(prev => !prev);
   }, []);
 
+  // Handler: Retour à la liste des projets
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
   // Effet: Ouvrir les propriétés quand une sélection change
   useEffect(() => {
     if (selection?.id) {
@@ -172,7 +177,8 @@ export function EditorScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Barre d'outils */}
-      <Toolbar 
+      <Toolbar
+        onBack={handleBack}
         onSave={handleSave}
         onAnalysis={handleToggleAnalysis}
       />
@@ -202,7 +208,7 @@ export function EditorScreen() {
 
         {/* Bouton flottant pour ajouter */}
         {mode === 'placement' && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.fab}
             onPress={toggleLibrary}
             activeOpacity={0.8}

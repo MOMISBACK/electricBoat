@@ -96,7 +96,7 @@ const SingleCable: React.FC<SingleCableProps> = ({
         x: boatTransform.offsetX + wp.x * boatTransform.scale,
         y: boatTransform.offsetY + wp.y * boatTransform.scale,
       }));
-      
+
       let d = `M ${from.x} ${from.y}`;
       waypoints.forEach(wp => {
         d += ` L ${wp.x} ${wp.y}`;
@@ -104,7 +104,7 @@ const SingleCable: React.FC<SingleCableProps> = ({
       d += ` L ${to.x} ${to.y}`;
       return d;
     }
-    
+
     // Chemin orthogonal simple
     const path = orthogonalPath(from, to);
     let d = `M ${path[0].x} ${path[0].y}`;
@@ -116,7 +116,7 @@ const SingleCable: React.FC<SingleCableProps> = ({
 
   // Milieu du câble pour l'étiquette
   const mid = midpoint(from, to);
-  
+
   // Points pour les indicateurs + et -
   const plusOffset = 18 / boatTransform.scale;
   const minusOffset = 18 / boatTransform.scale;
@@ -124,10 +124,18 @@ const SingleCable: React.FC<SingleCableProps> = ({
   const cableColor = getCableColor(connection);
   const cableWidth = getCableWidth(connection.sectionMm2, boatTransform.scale);
   const strokeWidth = 1 / boatTransform.scale;
-  
+
   // Size for + and - indicators (bigger for visibility)
-  const indicatorRadius = 12 / boatTransform.scale;
-  
+  const indicatorRadius = 14 / boatTransform.scale;
+
+  // Calculer angle du câble pour orienter les indicateurs
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const perpX = -dy / length; // Vecteur perpendiculaire
+  const perpY = dx / length;
+  const spacing = 4 / boatTransform.scale;
+
   // Déterminer si le fromNode est une source (pour afficher + vers la source)
   const isFromSource = ['battery', 'solar', 'alternator', 'charger'].includes(fromNode.type);
 
@@ -139,50 +147,52 @@ const SingleCable: React.FC<SingleCableProps> = ({
           d={pathD}
           fill="none"
           stroke={colors.primary}
-          strokeWidth={cableWidth + 4 / boatTransform.scale}
+          strokeWidth={cableWidth * 4 + 6 / boatTransform.scale}
           strokeLinecap="round"
           strokeLinejoin="round"
           opacity={0.3}
         />
       )}
 
-      {/* Câble positif (rouge) - ligne supérieure */}
+      {/* Câble POSITIF (rouge) - au-dessus */}
       <Path
         d={pathD}
         fill="none"
-        stroke="#dc2626"
-        strokeWidth={cableWidth + 1 / boatTransform.scale}
+        stroke="#ef4444"
+        strokeWidth={cableWidth + 0.5 / boatTransform.scale}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray={`${10 / boatTransform.scale},${5 / boatTransform.scale}`}
-        transform={`translate(0, ${-cableWidth})`}
-      />
-      
-      {/* Câble négatif (noir) - ligne inférieure */}
-      <Path
-        d={pathD}
-        fill="none"
-        stroke="#1f2937"
-        strokeWidth={cableWidth + 1 / boatTransform.scale}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        transform={`translate(0, ${cableWidth})`}
+        transform={`translate(${perpX * spacing}, ${perpY * spacing})`}
       />
 
-      {/* Indicateur + côté source - plus grand et visible */}
+      {/* Câble NÉGATIF (bleu foncé) - en-dessous */}
+      <Path
+        d={pathD}
+        fill="none"
+        stroke="#1e3a8a"
+        strokeWidth={cableWidth + 0.5 / boatTransform.scale}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        transform={`translate(${-perpX * spacing}, ${-perpY * spacing})`}
+      />
+
+      {/* Étiquette + côté SOURCE (toujours à gauche du câble, côté batterie) */}
       <G>
-        <Circle
-          cx={isFromSource ? from.x + plusOffset : to.x + plusOffset}
-          cy={isFromSource ? from.y - plusOffset : to.y - plusOffset}
-          r={indicatorRadius}
-          fill="#dc2626"
+        {/* Fond rectangle rouge */}
+        <Rect
+          x={(isFromSource ? from.x : to.x) - 10 / boatTransform.scale}
+          y={(isFromSource ? from.y : to.y) - 28 / boatTransform.scale}
+          width={20 / boatTransform.scale}
+          height={14 / boatTransform.scale}
+          rx={4 / boatTransform.scale}
+          fill="#ef4444"
           stroke="#ffffff"
-          strokeWidth={2 / boatTransform.scale}
+          strokeWidth={1.5 / boatTransform.scale}
         />
         <SvgText
-          x={isFromSource ? from.x + plusOffset : to.x + plusOffset}
-          y={isFromSource ? from.y - plusOffset + 4 / boatTransform.scale : to.y - plusOffset + 4 / boatTransform.scale}
-          fontSize={14 / boatTransform.scale}
+          x={isFromSource ? from.x : to.x}
+          y={(isFromSource ? from.y : to.y) - 18 / boatTransform.scale}
+          fontSize={12 / boatTransform.scale}
           fontWeight="bold"
           fill="#ffffff"
           textAnchor="middle"
@@ -190,21 +200,24 @@ const SingleCable: React.FC<SingleCableProps> = ({
           +
         </SvgText>
       </G>
-      
-      {/* Indicateur - côté consommateur - plus grand et visible */}
+
+      {/* Étiquette - côté CONSOMMATEUR (toujours à droite du câble, côté appareil) */}
       <G>
-        <Circle
-          cx={isFromSource ? to.x - minusOffset : from.x - minusOffset}
-          cy={isFromSource ? to.y - minusOffset : from.y - minusOffset}
-          r={indicatorRadius}
-          fill="#1f2937"
+        {/* Fond rectangle bleu */}
+        <Rect
+          x={(isFromSource ? to.x : from.x) - 10 / boatTransform.scale}
+          y={(isFromSource ? to.y : from.y) - 28 / boatTransform.scale}
+          width={20 / boatTransform.scale}
+          height={14 / boatTransform.scale}
+          rx={4 / boatTransform.scale}
+          fill="#1e3a8a"
           stroke="#ffffff"
-          strokeWidth={2 / boatTransform.scale}
+          strokeWidth={1.5 / boatTransform.scale}
         />
         <SvgText
-          x={isFromSource ? to.x - minusOffset : from.x - minusOffset}
-          y={isFromSource ? to.y - minusOffset + 4 / boatTransform.scale : from.y - minusOffset + 4 / boatTransform.scale}
-          fontSize={14 / boatTransform.scale}
+          x={isFromSource ? to.x : from.x}
+          y={(isFromSource ? to.y : from.y) - 18 / boatTransform.scale}
+          fontSize={12 / boatTransform.scale}
           fontWeight="bold"
           fill="#ffffff"
           textAnchor="middle"
@@ -213,18 +226,24 @@ const SingleCable: React.FC<SingleCableProps> = ({
         </SvgText>
       </G>
 
-      {/* Points de connexion */}
+      {/* Points de connexion source (rouge) */}
       <Circle
-        cx={from.x}
-        cy={from.y}
-        r={4 / boatTransform.scale}
-        fill={cableColor}
+        cx={isFromSource ? from.x : to.x}
+        cy={isFromSource ? from.y : to.y}
+        r={6 / boatTransform.scale}
+        fill="#ef4444"
+        stroke="#ffffff"
+        strokeWidth={2 / boatTransform.scale}
       />
+
+      {/* Points de connexion consommateur (bleu) */}
       <Circle
-        cx={to.x}
-        cy={to.y}
-        r={4 / boatTransform.scale}
-        fill={cableColor}
+        cx={isFromSource ? to.x : from.x}
+        cy={isFromSource ? to.y : from.y}
+        r={6 / boatTransform.scale}
+        fill="#1e3a8a"
+        stroke="#ffffff"
+        strokeWidth={2 / boatTransform.scale}
       />
 
       {/* Bouton de suppression (mode câblage) - visible quand sélectionné */}
@@ -358,7 +377,7 @@ export const CableRenderer: React.FC<CableRendererProps> = ({
 
   // Filtrer les connexions valides (dont les deux nodes existent)
   const validConnections = useMemo(() => {
-    return connections.filter(c => 
+    return connections.filter(c =>
       nodeMap.has(c.fromNodeId) && nodeMap.has(c.toNodeId)
     );
   }, [connections, nodeMap]);

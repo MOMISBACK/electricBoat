@@ -16,6 +16,7 @@ import { colors, spacing, borderRadius } from '../../theme';
 // ----------------------------------------------------------------------------
 
 interface ToolbarProps {
+  onBack?: () => void;
   onSave?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -77,16 +78,17 @@ const modeConfig: Array<{ mode: EditorMode; icon: string; label: string }> = [
 // ----------------------------------------------------------------------------
 
 export const Toolbar: React.FC<ToolbarProps> = ({
+  onBack,
   onSave,
   onUndo,
   onRedo,
   onAnalysis,
 }) => {
   const insets = useSafeAreaInsets();
-  const { 
-    mode, 
-    setMode, 
-    showGrid, 
+  const {
+    mode,
+    setMode,
+    showGrid,
     toggleGrid,
     toggleLibrary,
     resetTransform,
@@ -97,8 +99,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <View style={[styles.container, { paddingTop: insets.top + spacing.xs }]}>
       {/* Ligne du haut: Actions */}
       <View style={styles.row}>
-        {/* Bouton retour / menu */}
-        <TouchableOpacity style={styles.actionButton}>
+        {/* Bouton retour */}
+        <TouchableOpacity style={styles.actionButton} onPress={onBack}>
           <Text style={styles.actionIcon}>←</Text>
         </TouchableOpacity>
 
@@ -110,21 +112,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Actions droite */}
         <View style={styles.actionsRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={onUndo}
           >
             <Text style={styles.actionIcon}>↩️</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={onRedo}
           >
             <Text style={styles.actionIcon}>↪️</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionButton, isDirty && styles.saveButtonActive]}
             onPress={onSave}
           >
