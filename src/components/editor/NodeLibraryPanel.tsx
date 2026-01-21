@@ -11,7 +11,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -89,7 +88,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
   onToggle,
 }) => (
   <View style={styles.categorySection}>
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.categoryHeader}
       onPress={onToggle}
     >
@@ -98,7 +97,7 @@ const CategorySection: React.FC<CategorySectionProps> = ({
       <Text style={styles.categoryCount}>{category.templates.length}</Text>
       <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
     </TouchableOpacity>
-    
+
     {isExpanded && (
       <View style={styles.templatesList}>
         {category.templates.map((template) => (
@@ -161,12 +160,11 @@ export const NodeLibraryPanel: React.FC<NodeLibraryPanelProps> = ({
 
   // Sélectionner un template
   const handleSelectTemplate = useCallback((template: NodeTemplate) => {
-    // Position par défaut au centre
-    const screenWidth = Dimensions.get('window').width;
-    const screenHeight = Dimensions.get('window').height;
+    // Position par défaut au centre du bateau (coordonnées viewBox sailboat-30: 200x500)
+    // Le centre du bateau est environ à x=100, y=250
     const position: Point = {
-      x: screenWidth / 2,
-      y: screenHeight / 3,
+      x: 100 + Math.random() * 40 - 20, // 80-120 (centré avec léger décalage aléatoire)
+      y: 200 + Math.random() * 100,     // 200-300 (zone cabine/cockpit)
     };
 
     // Créer le node à partir du template
