@@ -26,6 +26,7 @@ import { BoatCanvas } from '../components/canvas';
 import { Toolbar, NodeLibraryPanel, PropertiesPanel } from '../components/editor';
 import { AnalysisPanel } from '../components/analysis';
 import { Toast, type ToastType } from '../components';
+import { saveProject } from '../storage/projectStorage';
 
 // ============================================================================
 // Composant principal
@@ -145,12 +146,51 @@ export function EditorScreen() {
   // Handler: Sauvegarde
   const handleSave = useCallback(async () => {
     try {
+      // Convertir vers le format LegacyProject pour le storage
+      const legacyProject = {
+        id: project.id,
+        name: project.name,
+        backgroundImage: undefined,
+        devices: project.nodes
+          .filter(n => n.type === 'consumer')
+          .map(n => ({
+            id: n.id,
+            name: n.name,
+            voltage: (n as any).voltage ?? 12,
+            powerW: (n as any).powerW,
+            currentA: (n as any).currentA,
+            dailyHours: (n as any).dailyHours ?? 1,
+            dutyCycle: (n as any).dutyCycle ?? 1,
+            position: n.position,
+          })),
+        sources: project.nodes
+          .filter(n => ['battery', 'solar', 'alternator'].includes(n.type))
+          .map(n => ({
+            id: n.id,
+            type: n.type as 'battery' | 'solar' | 'alternator' | 'wind',
+            voltage: (n as any).voltage ?? 12,
+            capacityAh: (n as any).capacityAh,
+            powerW: (n as any).maxPowerW,
+            efficiency: (n as any).efficiency,
+          })),
+        cables: project.connections.map(c => ({
+          id: c.id,
+          fromId: c.fromNodeId,
+          toId: c.toNodeId,
+          lengthM: c.lengthM ?? 1,
+          sectionMm2: c.sectionMm2,
+          maxCurrentA: 20, // valeur par défaut
+        })),
+      };
+
+      await saveProject(legacyProject);
       markSaved();
       showToast('Projet sauvegardé', 'success');
     } catch (error) {
+      console.error('Save failed:', error);
       showToast('Erreur de sauvegarde', 'error');
     }
-  }, [markSaved, showToast]);
+  }, [project, markSaved, showToast]);
 
   // Handler: Fermer le panneau propriétés
   const handleCloseProperties = useCallback(() => {

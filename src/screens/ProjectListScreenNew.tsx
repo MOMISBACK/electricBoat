@@ -21,6 +21,7 @@ import { DEFAULT_SETTINGS } from '../models/types';
 import { useProjectStore } from '../store/useProjectStore';
 import { boatTemplates } from '../data/boatTemplates';
 import { colors, borderRadius, spacing, typography } from '../theme';
+import { listProjects, saveProject, deleteProject as deleteProjectFromStorage } from '../storage/projectStorage';
 
 // ----------------------------------------------------------------------------
 // Composant de carte de projet
@@ -36,7 +37,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onPress, onLongPress
   const nodeCount = project.nodes.length;
   const connectionCount = project.connections.length;
   const template = boatTemplates.find(t => t.id === project.boatTemplateId);
-  
+
   return (
     <TouchableOpacity
       style={styles.projectCard}
@@ -56,7 +57,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onPress, onLongPress
         </View>
         <Text style={styles.chevron}>›</Text>
       </View>
-      
+
       {/* Aperçu des équipements */}
       {nodeCount > 0 && (
         <View style={styles.nodesPreview}>
@@ -71,7 +72,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onPress, onLongPress
           )}
         </View>
       )}
-      
+
       {/* Date de modification */}
       <Text style={styles.dateText}>
         Modifié le {new Date(project.updatedAt).toLocaleDateString('fr-FR')}
@@ -122,7 +123,7 @@ const BoatTemplateSelector: React.FC<BoatTemplateSelectorProps> = ({ selectedId,
 export function ProjectListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { project, createNewProject, loadProject, resetProject } = useProjectStore();
-  
+
   // État local
   const [projects, setProjects] = useState<Project[]>([]);
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -131,26 +132,56 @@ export function ProjectListScreen() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Charger les projets depuis le storage (simulation)
-  const loadProjects = useCallback(async () => {
-    // TODO: Implémenter la persistance avec expo-file-system
-    // Pour l'instant, on garde une liste vide ou le projet courant
-    const savedProjects: Project[] = [];
-    if (project.id && project.nodes.length > 0) {
-      savedProjects.push(project);
+  // Charger les projets depuis le storage
+  const loadProjectsFromStorage = useCallback(async () => {
+    try {
+      const savedProjects = await listProjects();
+      // Mapper vers le type Project si nécessaire (projectStorage utilise LegacyProject)
+      const mappedProjects: Project[] = savedProjects.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        boatTemplateId: 'sailboat-30',
+        nodes: (p.devices ?? []).map((d: any) => ({
+          id: d.id,
+          type: 'consumer' as const,
+          name: d.name,
+          icon: '⚡',
+          position: d.position,
+          voltage: d.voltage,
+          rotation: 0,
+          locked: false,
+          powerW: d.powerW,
+          currentA: d.currentA,
+          dailyHours: d.dailyHours,
+          dutyCycle: d.dutyCycle,
+        })),
+        connections: (p.cables ?? []).map((c: any) => ({
+          id: c.id,
+          fromNodeId: c.fromId,
+          toNodeId: c.toId,
+          sectionMm2: c.sectionMm2,
+          lengthM: c.lengthM,
+          cableType: 'single' as const,
+        })),
+        settings: { ...DEFAULT_SETTINGS },
+        createdAt: p.createdAt ?? new Date().toISOString(),
+        updatedAt: p.updatedAt ?? new Date().toISOString(),
+      }));
+      setProjects(mappedProjects);
+    } catch (error) {
+      console.error('Failed to load projects:', error);
     }
-    setProjects(savedProjects);
-  }, [project]);
+  }, []);
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    loadProjectsFromStorage();
+  }, [loadProjectsFromStorage]);
 
   // Créer un nouveau projet
   const handleCreate = () => {
     const name = newProjectName.trim() || `Projet ${projects.length + 1}`;
     const id = Date.now().toString();
-    
+
     const newProject: Project = {
       id,
       name,
@@ -161,7 +192,7 @@ export function ProjectListScreen() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
+
     createNewProject(newProject);
     setShowNewDialog(false);
     setNewProjectName('');
@@ -178,8 +209,12 @@ export function ProjectListScreen() {
   // Supprimer un projet
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    // TODO: Implémenter la suppression dans le storage
-    setProjects(prev => prev.filter(p => p.id !== deleteTarget.id));
+    try {
+      await deleteProjectFromStorage(deleteTarget.id);
+      setProjects(prev => prev.filter(p => p.id !== deleteTarget.id));
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+    }
     setDeleteTarget(null);
     setShowDeleteConfirm(false);
   };
